@@ -1,0 +1,155 @@
+#!/usr/bin/env bash
+
+find_by_ext() {
+    local dir="${1:-.}"
+    local ext="${2:-}"
+    local first=0
+
+    if [[ -z "$ext" ]]; then
+        echo "Usage: find_by_ext <directory> <extension>" >&2
+        return 1
+    fi
+
+    local pattern="*.$ext"
+    for file in "$dir"/$pattern; do
+        if [[ -f "$file" ]]; then
+            echo "$file"
+            first=1
+        fi
+    done
+
+    [[ $first -eq 1 ]]
+}
+
+batch_mv() {
+    local src_dir="${1:-.}"
+    local dest_dir="${2:-.}"
+    local ext="${3:-*}"
+
+    if [[ -z "$ext" || "$ext" == "*" ]]; then
+        echo "Usage: batch_mv <source_dir> <dest_dir> <extension>" >&2
+        return 1
+    fi
+
+    if [[ ! -d "$dest_dir" ]]; then
+        mkdir -p "$dest_dir"
+    fi
+
+    local pattern="*.$ext"
+    local count=0
+    for file in "$src_dir"/$pattern; do
+        if [[ -f "$file" ]]; then
+            mv "$file" "$dest_dir/"
+            ((count++))
+        fi
+    done
+
+    echo "Moved $count file(s)"
+    [[ $count -gt 0 ]]
+}
+
+find_by_name() {
+    local dir="${1:-.}"
+    local pattern="${2:-}"
+
+    if [[ -z "$pattern" ]]; then
+        echo "Usage: find_by_name <directory> <pattern>" >&2
+        return 1
+    fi
+
+    find "$dir" -iname "$pattern" -type f
+}
+
+file_count() {
+    local dir="${1:-.}"
+    local ext="${2:-}"
+
+    local pattern
+    if [[ -n "$ext" ]]; then
+        pattern="*.$ext"
+    else
+        pattern="*"
+    fi
+
+    local count=0
+    for file in "$dir"/$pattern; do
+        [[ -f "$file" ]] && ((count++))
+    done
+
+    echo "$count"
+}
+
+file_size() {
+    local dir="${1:-.}"
+    local ext="${2:-}"
+
+    local pattern
+    if [[ -n "$ext" ]]; then
+        pattern="*.$ext"
+    else
+        pattern="*"
+    fi
+
+    local total=0
+    for file in "$dir"/$pattern; do
+        if [[ -f "$file" ]]; then
+            local size
+            size=$(stat -c%s "$file" 2>/dev/null) || size=0
+            ((total+=size))
+        fi
+    done
+
+    echo "$total"
+}
+
+backup_file() {
+    local file="${1:-}"
+
+    if [[ -z "$file" || ! -f "$file" ]]; then
+        echo "Usage: backup_file <file>" >&2
+        return 1
+    fi
+
+    local timestamp
+    timestamp=$(date +%Y%m%d_%H%M%S)
+    local backup="${file}.${timestamp}.bak"
+
+    cp "$file" "$backup"
+    echo "$backup"
+}
+
+ensure_dir() {
+    local dir="${1:-}"
+
+    if [[ -z "$dir" ]]; then
+        echo "Usage: ensure_dir <directory>" >&2
+        return 1
+    fi
+
+    if [[ ! -d "$dir" ]]; then
+        mkdir -p "$dir"
+    fi
+}
+
+confirm() {
+    local prompt="${1:-Are you sure?}"
+    local response
+
+    while true; do
+        read -p "$prompt [y/n] " response
+        case "$response" in
+            y|Y) return 0 ;;
+            n|N) return 1 ;;
+        esac
+    done
+}
+
+is_empty_dir() {
+    local dir="${1:-.}"
+
+    if [[ ! -d "$dir" ]]; then
+        return 1
+    fi
+
+    [[ -z "$(ls -A "$dir" 2>/dev/null)" ]]
+}

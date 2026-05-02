@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+
+is_online() {
+    if ping -c 1 -W 2 8.8.8.8 >/dev/null 2>&1; then
+        return 0
+    fi
+    return 1
+}
+
+get_local_ip() {
+    local iface="${1:-}"
+    if [[ -n "$iface" ]]; then
+        ip addr show "$iface" 2>/dev/null | grep -oP 'inet \K[\d.]+'
+    else
+        hostname -I 2>/dev/null | awk '{print $1}'
+    fi
+}
+
+get_public_ip() {
+    curl -s -m 5 -4 ifconfig.me
+}
+
+check_port() {
+    local host="${1:-localhost}"
+    local port="${2:-80}"
+    local timeout="${3:-3}"
+
+    if command -v nc >/dev/null 2>&1; then
+        nc -zv -w "$timeout" "$host" "$port" 2>&1 | grep -q succeeded
+    elif command -v timeout >/dev/null 2>&1; then
+        timeout "$timeout" bash -c "echo >/dev/tcp/$host/$port" 2>/dev/null
+    else
+        echo "netcat or timeout required" >&2
+        return 1
+    fi
+}
