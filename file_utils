@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-. ./log_utils
+. ~/scripts/libs/log_utils
 
 find_by_ext() {
     local dir="${1:-.}"
@@ -8,14 +8,14 @@ find_by_ext() {
     local first=0
 
     if [[ -z "$ext" ]]; then
-        echo "Usage: find_by_ext <directory> <extension>" >&2
+        log_error "Usage: find_by_ext <directory> <extension>"
         return 1
     fi
 
     local pattern="*.$ext"
     for file in "$dir"/$pattern; do
         if [[ -f "$file" ]]; then
-            echo "$file"
+            log_info "Found: $file"
             first=1
         fi
     done
@@ -29,7 +29,7 @@ batch_mv() {
     local ext="${3:-*}"
 
     if [[ -z "$ext" || "$ext" == "*" ]]; then
-        echo "Usage: batch_mv <source_dir> <dest_dir> <extension>" >&2
+        log_error "Usage: batch_mv <source_dir> <dest_dir> <extension>"
         return 1
     fi
 
@@ -46,7 +46,7 @@ batch_mv() {
         fi
     done
 
-    echo "Moved $count file(s)"
+    log_info "Moved $count file(s)"
     [[ $count -gt 0 ]]
 }
 
@@ -55,7 +55,7 @@ find_by_name() {
     local pattern="${2:-}"
 
     if [[ -z "$pattern" ]]; then
-        echo "Usage: find_by_name <directory> <pattern>" >&2
+        log_error "Usage: find_by_name <directory> <pattern>"
         return 1
     fi
 
@@ -78,6 +78,7 @@ file_count() {
         [[ -f "$file" ]] && ((count++))
     done
 
+    log_info "Found $count file(s)"
     echo "$count"
 }
 
@@ -101,6 +102,7 @@ file_size() {
         fi
     done
 
+    log_info "Total size: $total bytes"
     echo "$total"
 }
 
@@ -108,7 +110,7 @@ backup_file() {
     local file="${1:-}"
 
     if [[ -z "$file" || ! -f "$file" ]]; then
-        echo "Usage: backup_file <file>" >&2
+        log_error "Usage: backup_file <file>"
         return 1
     fi
 
@@ -117,19 +119,20 @@ backup_file() {
     local backup="${file}.${timestamp}.bak"
 
     cp "$file" "$backup"
-    echo "$backup"
+    log_success "Backed up: $backup"
 }
 
 ensure_dir() {
     local dir="${1:-}"
 
     if [[ -z "$dir" ]]; then
-        echo "Usage: ensure_dir <directory>" >&2
+        log_error "Usage: ensure_dir <directory>"
         return 1
     fi
 
     if [[ ! -d "$dir" ]]; then
         mkdir -p "$dir"
+        log_info "Created directory: $dir"
     fi
 }
 
