@@ -159,24 +159,65 @@ is_empty_dir() {
     [[ -z "$(ls -A "$dir" 2>/dev/null)" ]]
 }
 
+declare -A BASH_TEMPLATES
+
+BASH_TEMPLATES[default]='#!/usr/bin/env bash'
+
+BASH_TEMPLATES[curl]=$(cat <<'EOF'
+#!/usr/bin/env bash
+BASE_URL=""
+TOKEN=""
+
+headers_json(){
+  printf "%q " -H "Content-Type: application/json"
+  if [ "$1" = "auth" ]; then
+    printf "%q " -H "Authorization: Bearer $TOKEN"
+  fi
+}
+
+headers_form(){
+  printf "%q " -H "Content-Type: application/x-www-form-urlencoded"
+  if [ "$1" = "auth" ]; then
+    printf "%q " -H "Authorization: Bearer $TOKEN"
+  fi
+}
+
+vjson(){
+  jq | nvim
+}
+
+# GET example
+# curl $(headers_json) "$BASE_URL/resource"
+
+# GET with auth
+# curl $(headers_json auth) "$BASE_URL/resource"
+
+# POST json example
+# body='{"key": "value"}'
+# curl -X POST $(headers_json) "$BASE_URL/resource" -d "$body"
+
+# POST form example
+# curl -X POST $(headers_form) "$BASE_URL/resource" -d "key=value&key2=value2"
+EOF
+)
+
 new_script() {
-	local dir=${2:-.}
-	local file_name=$1
+  local file_name=$1
+  local template=${2:-default}
+  local dir=${3:-.}
 
-	if [[ -z $1 ]]; then
-		read -p "Enter file name: " file_name
-	fi
+  if [[ -z $1 ]]; then
+    read -p "Enter file name: " file_name
+  fi
 
-	local file_path="$dir/$file_name"
+  local file_path="$dir/$file_name"
+  if [[ -f "$file_path" ]]; then
+    log_error "Error: file already exists"
+    return 1
+  fi
 
-	if [[ -f "$file_path" ]]; then
-		log_error "Error: file already exists" 
-		return 1
-	fi
-
-	touch "$file_path"
-	echo '#!/usr/bin/env bash' > "$file_path"
-	chmod +x "$file_path"
-	log_success "Created: $file_path"
+  echo "${BASH_TEMPLATES[$template]}" > "$file_path"
+  chmod +x "$file_path"
+  log_success "Created: $file_path"
 }
 
